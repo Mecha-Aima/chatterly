@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import { supabaseServer } from './supabaseServer';
+import { NextApiRequest } from 'next';
 
-export async function verifySupabaseAuth(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
+export async function verifySupabaseAuth(request: NextApiRequest) {
+  const authHeader = request.headers.authorization;
   
   if (!authHeader) {
     throw new Error('No authorization header');

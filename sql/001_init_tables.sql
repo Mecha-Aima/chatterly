@@ -22,6 +22,9 @@ CREATE POLICY "Users can view own profile" ON users
 CREATE POLICY "Users can update own profile" ON users
   FOR UPDATE USING (auth.uid() = id);
 
+CREATE POLICY "Enable insert for authenticated users only" ON users
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
 -- Profiles table
 CREATE TABLE profiles (
   user_id UUID REFERENCES users(id) ON DELETE CASCADE PRIMARY KEY,
