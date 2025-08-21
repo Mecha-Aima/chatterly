@@ -1,37 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+# Chatterly
 
-## Getting Started
+A modern chat application built with Next.js, TypeScript, Tailwind CSS, and Supabase authentication.
 
-First, run the development server:
+## Local Development Setup
+
+### Prerequisites
+
+- Node.js 18+ 
+- npm or yarn
+- Supabase account
+
+### Environment Variables
+
+Create a `.env.local` file in the root directory with the following variables:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Supabase Setup
 
-You can start editing the page by modifying `app/route.ts`. The page auto-updates as you edit the file.
+1. Create a new Supabase project at [supabase.com](https://supabase.com)
+2. Copy your project URL and anon key to `.env.local`
+3. Run the SQL migration in `sql/001_init_tables.sql` in your Supabase SQL editor
+4. Configure authentication providers in the Supabase dashboard:
+   - Go to Authentication > Providers
+   - Enable Email and Google (if you want OAuth)
+   - Set redirect URLs to include `http://localhost:3000/*` for development
 
-## Learn More
+### Installation
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Install dependencies
+npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Start development server
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-## Deploy on Vercel
+### Features
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- ✅ Email/password authentication
+- ✅ OAuth with Google
+- ✅ Magic link authentication
+- ✅ Password reset
+- ✅ Protected routes
+- ✅ User profiles and settings
+- ✅ Row-level security
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### API Routes
+
+- `/api/health` - Health check endpoint
+- `/api/protected` - Example protected API route
+- `/api/users/ensure` - Ensures user profile exists
+
+### Pages
+
+- `/` - Landing page
+- `/login` - Sign in page
+- `/signup` - Sign up page
+- `/dashboard` - Protected dashboard (requires authentication)
+
+## Project Structure
+
+```
+src/
+├── app/                  # App Router pages and API routes
+│   ├── api/             # API endpoints
+│   │   ├── health/      # Health check endpoint
+│   │   ├── protected/   # Protected API example
+│   │   └── users/       # User management APIs
+│   ├── dashboard/       # Protected dashboard page
+│   ├── login/          # Sign in page
+│   ├── signup/         # Sign up page
+│   ├── globals.css     # Global styles
+│   ├── layout.tsx      # Root layout with AuthProvider
+│   └── page.tsx        # Landing page
+├── context/            # React contexts (Auth)
+└── lib/               # Utilities (Supabase clients, auth verification)
+sql/                   # Database schema and migrations
+```
 
 ## API Routes
 
