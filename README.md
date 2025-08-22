@@ -24,11 +24,26 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 1. Create a new Supabase project at [supabase.com](https://supabase.com)
 2. Copy your project URL and anon key to `.env.local`
-3. Run the SQL migration in `sql/001_init_tables.sql` in your Supabase SQL editor
+3. Run the SQL migrations in order in your Supabase SQL editor:
+   - `sql/001_init_tables.sql`
+   - `sql/002_learning_system_tables.sql`
+   - `sql/003_sentence_bank.sql`
+   - `sql/005_fix_user_triggers.sql` (fixes signup database errors)
 4. Configure authentication providers in the Supabase dashboard:
    - Go to Authentication > Providers
    - Enable Email and Google (if you want OAuth)
+   - Go to Authentication > Settings
+   - **Disable "Confirm email"** under Email configuration for immediate signup
    - Set redirect URLs to include `http://localhost:3000/*` for development
+
+### Troubleshooting
+
+If you get "Database error saving new user" during signup:
+
+1. Run the diagnostic queries in `sql/diagnostic_queries.sql` in your Supabase SQL editor
+2. Make sure you've applied `sql/005_fix_user_triggers.sql`
+3. Check the browser console for detailed error messages
+4. Ensure "Confirm email" is disabled in Authentication > Settings
 
 ### Installation
 
@@ -68,21 +83,30 @@ The application will be available at [http://localhost:3000](http://localhost:30
 ## Project Structure
 
 ```
-src/
-├── app/                  # App Router pages and API routes
-│   ├── api/             # API endpoints
-│   │   ├── health/      # Health check endpoint
-│   │   ├── protected/   # Protected API example
-│   │   └── users/       # User management APIs
-│   ├── dashboard/       # Protected dashboard page
-│   ├── login/          # Sign in page
-│   ├── signup/         # Sign up page
-│   ├── globals.css     # Global styles
-│   ├── layout.tsx      # Root layout with AuthProvider
-│   └── page.tsx        # Landing page
-├── context/            # React contexts (Auth)
-└── lib/               # Utilities (Supabase clients, auth verification)
-sql/                   # Database schema and migrations
+.
+├── components.json
+├── next.config.ts
+├── package.json
+├── postcss.config.js
+├── tsconfig.json
+├── README.md
+├── specs/                   # Specs and tasks (e.g., auth requirements)
+├── sql/                     # Database schema and migrations
+│   ├── 001_init_tables.sql
+│   └── 002_learning_system_tables.sql
+└── src/
+   ├── app/                 # App Router pages and API routes
+   │   ├── api/             # API endpoints (health, protected, users/ensure)
+   │   ├── dashboard/       # Protected dashboard page
+   │   ├── login/           # Sign in page
+   │   ├── signup/          # Sign up page
+   │   ├── globals.css
+   │   ├── layout.tsx       # Root layout with AuthProvider
+   │   └── page.tsx         # Landing page
+   ├── components/          # UI components (shadcn/ui wrappers)
+   ├── context/             # React contexts (Auth)
+   ├── features/            # Feature modules
+   └── lib/                 # Supabase clients, utils, auth helpers
 ```
 
 ## API Routes

@@ -15,6 +15,7 @@ export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -39,12 +40,21 @@ export default function Signup() {
       return;
     }
 
+    if (!displayName.trim()) {
+      setError('Please enter a display name');
+      setLoading(false);
+      return;
+    }
+
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
+          data: {
+            full_name: displayName.trim()
+          }
         }
       });
 
@@ -116,6 +126,21 @@ export default function Signup() {
                 {error}
               </div>
             )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="displayName" className="text-sm font-medium text-gray-700">
+                Display Name
+              </Label>
+              <Input
+                id="displayName"
+                type="text"
+                placeholder="Enter your display name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+                className="h-11"
+              />
+            </div>
             
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium text-gray-700">

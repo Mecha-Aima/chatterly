@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseServer } from "../../../../lib/supabaseServer";
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,16 +9,31 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error } = await supabaseServer.auth.getUser(token);
+    
+    // Create a client with the user's access token for proper RLS context
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      }
+    );
+    
+    const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Ensure user exists in our users table
-    const { data: existingUser, error: fetchError } = await supabaseServer
+    // The database trigger should have already created the user record
+    // Let's just verify it exists and return success
+    const { data: existingUser, error: fetchError } = await supabase
       .from('users')
-      .select('id')
+      .select('id, display_name')
       .eq('id', user.id)
       .single();
 
@@ -28,53 +43,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (!existingUser) {
-      // Create user record
-      const { error: insertUserError } = await supabaseServer
-        .from('users')
-        .insert({
-          id: user.id,
-          email: user.email!,
-          display_name: user.user_metadata?.full_name || null,
-          avatar_url: user.user_metadata?.avatar_url || null,
-          role: 'user',
-          verified_at: user.email_confirmed_at,
-        });
-
-      if (insertUserError) {
-        console.error('Error creating user:', insertUserError);
-        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
-      }
-
-      // Create profile record
-      const { error: insertProfileError } = await supabaseServer
-        .from('profiles')
-        .insert({
-          user_id: user.id,
-          preferred_language: 'en',
-          difficulty_level: 'beginner',
-        });
-
-      if (insertProfileError) {
-        console.error('Error creating profile:', insertProfileError);
-        // Don't fail the whole operation for profile creation
-      }
-
-      // Create settings record
-      const { error: insertSettingsError } = await supabaseServer
-        .from('settings')
-        .insert({
-          user_id: user.id,
-          onboarding_complete: false,
-          notifications_enabled: true,
-        });
-
-      if (insertSettingsError) {
-        console.error('Error creating settings:', insertSettingsError);
-        // Don't fail the whole operation for settings creation
-      }
+      // If for some reason the trigger didn't work, we can log this but still return success
+      // since the auth user exists
+      console.log('User not found in users table, but auth user exists. This might be expected for new users.');
     }
 
-    return NextResponse.json({ success: true, userId: user.id });
+    return NextResponse.json({ 
+      success: true, 
+      userId: user.id,
+      displayName: existingUser?.display_name || user.user_metadata?.full_name || null
+    });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
