@@ -83,13 +83,16 @@ export default function Dashboard() {
 
         {/* Quick Actions */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all cursor-pointer">
+          <Card 
+            className="border-0 shadow-lg bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all cursor-pointer"
+            onClick={() => router.push('/sessions')}
+          >
             <CardContent className="p-6 text-center">
               <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
                 <MessageCircle className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Start Chat</h3>
-              <p className="text-sm text-gray-600">Begin a new conversation</p>
+              <h3 className="font-semibold text-gray-900 mb-1">Sessions Demo</h3>
+              <p className="text-sm text-gray-600">Test session management</p>
             </CardContent>
           </Card>
 
