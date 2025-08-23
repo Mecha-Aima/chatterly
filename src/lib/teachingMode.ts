@@ -1,4 +1,5 @@
 import { Database } from '@/types/database.types';
+import OpenAI from 'openai';
 
 // Type for sentence from the sentence bank
 type SentenceBankRow = Database['public']['Tables']['sentence_bank']['Row'];
@@ -28,14 +29,7 @@ export interface TeachingResponse {
   error?: string;
 }
 
-// AI/ML API response interface
-interface AIMLResponse {
-  choices: Array<{
-    message: {
-      content: string;
-    };
-  }>;
-}
+// Use OpenAI's built-in Response type
 
 // Difficulty-specific teaching guidelines
 const DIFFICULTY_GUIDELINES = {
@@ -54,82 +48,67 @@ const DIFFICULTY_GUIDELINES = {
 };
 
 // Enhanced teaching prompt template with session context
-const createTeachingPrompt = (language: string, difficulty: string, turnNumber?: number, sessionContext?: any) => {
+const createTeachingPrompt = (
+  language: string, 
+  difficulty: string, 
+  sentence: string,
+  turnNumber?: number, 
+  sessionContext?: any
+) => {
   const difficultyGuide = DIFFICULTY_GUIDELINES[difficulty as keyof typeof DIFFICULTY_GUIDELINES] || DIFFICULTY_GUIDELINES.beginner;
   
-  const basePrompt = `You are a friendly and encouraging language tutor. I will give you a sentence in a target language, and you should teach it to a student.
+  const basePrompt = `You are a friendly and encouraging language tutor. You will provide a brief teaching explanation for a sentence in a target language.
 
 Target Language: ${language}
 Difficulty Level: ${difficulty}
+Sentence to teach: ${sentence}
 ${turnNumber ? `Turn Number: ${turnNumber}` : ''}
 ${sessionContext?.previousSentences?.length ? `Previous sentences in this session: ${sessionContext.previousSentences.join(', ')}` : ''}
 
-IMPORTANT: Respond with ONLY a valid JSON object. Do not use markdown formatting, code blocks, or any other text. Return raw JSON only.
+IMPORTANT: Respond with ONLY plain text. Do not use JSON, markdown formatting, code blocks, or any other structured format.
 
-Please respond with a JSON object containing exactly these fields:
-- sentence: the original sentence (exactly as provided)
-- pronunciation: clear phonetic guide for pronunciation using simple phonetic notation
-- meaning: accurate English translation/meaning
-- teaching_explanation: brief explanation of grammar, usage, or cultural context (2-3 sentences, appropriate for ${difficulty} level)
-- encouragement: personalized motivational message for the student${turnNumber ? ` (this is turn ${turnNumber})` : ''}
+Please provide a brief teaching explanation that covers:
+- Grammar structures and usage patterns
+- Cultural context when relevant
+- Practical usage tips
+- Any interesting linguistic notes
 
 Teaching Guidelines for ${difficulty} level:
 ${difficultyGuide.explanation}
 
 General Guidelines:
-- Keep explanations simple and encouraging
+- Keep explanations simple and encouraging (2-3 sentences)
 - Focus on practical usage and real-world application
 - Use positive, supportive language
-- For pronunciation, use simple phonetic notation that's easy to understand
+- Make it appropriate for ${difficulty} level learners
 ${turnNumber && turnNumber > 1 ? '- Reference previous learning when appropriate to create continuity' : ''}
 ${sessionContext?.previousSentences?.length ? '- Avoid repeating explanations from previous sentences in this session' : ''}
 
-Default encouragement style: ${difficultyGuide.encouragement}`;
+Provide only the teaching explanation as plain text.`;
 
   return basePrompt;
 };
 
-// Fallback responses for different languages
-const FALLBACK_RESPONSES: Record<string, any> = {
-  es: {
-    sentence: "Hola, ¿cómo estás?",
-    pronunciation: "OH-lah, KOH-moh ehs-TAHS",
-    meaning: "Hello, how are you?",
-    teaching_explanation: "This is a common greeting in Spanish. Use it to ask someone how they are doing.",
-    encouragement: "Great choice! This is one of the most useful phrases to learn first."
-  },
-  fr: {
-    sentence: "Bonjour, comment allez-vous?",
-    pronunciation: "bon-ZHOOR, koh-mahn tah-lay VOO",
-    meaning: "Hello, how are you?",
-    teaching_explanation: "This is a polite greeting in French. Use it in formal situations.",
-    encouragement: "Excellent! This is a fundamental French greeting."
-  },
-  de: {
-    sentence: "Hallo, wie geht es Ihnen?",
-    pronunciation: "HAH-loh, vee gayt es EE-nen",
-    meaning: "Hello, how are you?",
-    teaching_explanation: "This is a formal greeting in German. Use it when meeting someone new.",
-    encouragement: "Wunderbar! This is a perfect German greeting to start with."
-  },
-  it: {
-    sentence: "Ciao, come stai?",
-    pronunciation: "chow, KOH-meh stah-ee",
-    meaning: "Hello, how are you?",
-    teaching_explanation: "This is a casual greeting in Italian. Use it with friends and family.",
-    encouragement: "Bene! This is a wonderful Italian greeting to learn."
-  },
-  pt: {
-    sentence: "Olá, como está?",
-    pronunciation: "oh-LAH, KOH-moh ehs-TAH",
-    meaning: "Hello, how are you?",
-    teaching_explanation: "This is a common greeting in Portuguese. Use it in everyday conversations.",
-    encouragement: "Ótimo! This is an essential Portuguese greeting."
-  }
+// Simplified fallback teaching explanations for different languages
+const FALLBACK_EXPLANATIONS: Record<string, string> = {
+  es: "This is a common greeting in Spanish. The phrase 'Hola' is informal and friendly, while '¿cómo estás?' asks about someone's wellbeing. Use this with friends, family, or in casual situations.",
+  fr: "This is a polite greeting in French. 'Bonjour' is used during the day, and 'comment allez-vous?' is the formal way to ask how someone is doing. Use this in professional or formal situations.",
+  de: "This is a formal greeting in German. 'Hallo' is a universal greeting, and 'wie geht es Ihnen?' is the polite form of asking how someone is. The 'Ihnen' shows respect and formality.",
+  it: "This is a casual greeting in Italian. 'Ciao' is very informal and friendly, while 'come stai?' asks how you are doing. Perfect for use with friends, family, or peers.",
+  pt: "This is a common greeting in Portuguese. 'Olá' is a warm, friendly greeting, and 'como está?' asks about someone's state. This works well in most everyday conversations."
 };
 
-// Default fallback for unsupported languages
-const DEFAULT_FALLBACK = FALLBACK_RESPONSES.es;
+// Fallback response structure for errors
+const createFallbackResponse = (language: string, sentence: string) => ({
+  sentence: sentence,
+  pronunciation: "Pronunciation guide unavailable",
+  meaning: "Translation unavailable", 
+  teaching_explanation: FALLBACK_EXPLANATIONS[language] || FALLBACK_EXPLANATIONS.es,
+  encouragement: "Keep practicing! Every new phrase brings you closer to fluency."
+});
+
+// Default fallback explanation
+const DEFAULT_FALLBACK_EXPLANATION = FALLBACK_EXPLANATIONS.es;
 
 /**
  * Generates a teaching response by fetching a sentence and using AI to create educational content
@@ -140,13 +119,18 @@ export async function generateTeachingResponse(request: TeachingRequest): Promis
   // Validate required environment variables
   if (!process.env.OPENAI_API_KEY) {
     console.error('OPENAI_API_KEY environment variable is not set');
-    const fallbackResponse = FALLBACK_RESPONSES[language] || DEFAULT_FALLBACK;
+    const fallbackResponse = createFallbackResponse(language, "Hello, how are you?");
     return {
       success: false,
       error: 'AI service is not configured. Please try again later.',
       data: fallbackResponse
     };
   }
+
+  // Initialize OpenAI client
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
 
   try {
     // Step 1: Fetch sentence from existing /api/sentences endpoint
@@ -176,84 +160,63 @@ export async function generateTeachingResponse(request: TeachingRequest): Promis
     const prompt = createTeachingPrompt(
       language, 
       difficulty, 
+      selectedSentence.sentence_text,
       turnNumber,
       sessionContext
     );
 
-    const user_prompt = `Sentence to teach: ${selectedSentence.sentence_text}`
+    const user_prompt = `Please provide the teaching explanation for this sentence.`
 
-    // Step 3: Call OpenAI API with GPT-4o-mini
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: prompt
-          },
-          {
-            role: 'user',
-            content: user_prompt
-          }
-        ],
-        max_tokens: 500,
-        temperature: 0.7
-      })
+    // Step 3: Call OpenAI Responses API with GPT-4o-mini
+    const aiResponse = await openai.responses.create({
+      model: 'gpt-4o-mini',
+      instructions: prompt,
+      input: user_prompt,
+      max_output_tokens: 500,
+      temperature: 0.7,
     });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text().catch(() => 'Unknown error');
-      throw new Error(`OpenAI API call failed with status: ${aiResponse.status} ${aiResponse.statusText}. Response: ${errorText}`);
+    if (aiResponse.status !== 'completed') {
+      throw new Error(`OpenAI Responses API call failed with status: ${aiResponse.status}`);
     }
 
-    const aiData: AIMLResponse = await aiResponse.json();
+    if (!aiResponse.output || aiResponse.output.length === 0) {
+      throw new Error('No response from OpenAI Responses API');
+    }
+
+    // Step 4: Parse OpenAI Responses API response
+    const assistantMessage = aiResponse.output.find(item => 
+      item.type === 'message' && 'role' in item && item.role === 'assistant'
+    );
     
-    if (!aiData.choices || aiData.choices.length === 0) {
-      throw new Error('No response from OpenAI API');
+    if (!assistantMessage || assistantMessage.type !== 'message' || !('content' in assistantMessage)) {
+      throw new Error('No assistant message found in response');
     }
 
-    // Step 4: Parse AI response
-    const aiContent = aiData.choices[0].message.content;
+    const textContent = assistantMessage.content.find((content: any) => content.type === 'output_text');
+    if (!textContent || textContent.type !== 'output_text') {
+      throw new Error('No text content found in assistant message');
+    }
+
+    const aiContent = (textContent as any).text;
     console.log(`\n🟩 AI Response: ${aiContent}`)
-    let teachingData;
     
-    try {
-      // Clean the AI response by removing markdown code blocks if present
-      let cleanedContent = aiContent.trim();
-      
-      // Remove markdown code block formatting if present
-      if (cleanedContent.startsWith('```json')) {
-        cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-      } else if (cleanedContent.startsWith('```')) {
-        cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-      }
-      
-      teachingData = JSON.parse(cleanedContent);
-    } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', parseError);
-      console.error('AI response content:', aiContent);
-      throw new Error('Invalid response format from AI');
+    // Step 5: Clean the AI response and use it as teaching explanation
+    const teachingExplanation = aiContent.trim();
+    
+    if (!teachingExplanation) {
+      throw new Error('Empty teaching explanation from AI');
     }
 
-    // Step 5: Validate response structure
-    if (!teachingData.sentence || !teachingData.pronunciation || !teachingData.meaning || 
-        !teachingData.teaching_explanation || !teachingData.encouragement) {
-      throw new Error('Incomplete teaching response from AI');
-    }
-
+    // Create response with sentence details and AI-generated teaching explanation
     return {
       success: true,
       data: {
-        sentence: teachingData.sentence,
-        pronunciation: teachingData.pronunciation,
-        meaning: teachingData.meaning,
-        teaching_explanation: teachingData.teaching_explanation,
-        encouragement: teachingData.encouragement
+        sentence: selectedSentence.sentence_text,
+        pronunciation: selectedSentence.pronunciation_guide || "Pronunciation guide unavailable",
+        meaning: selectedSentence.meaning_english || "Translation unavailable",
+        teaching_explanation: teachingExplanation,
+        encouragement: "Great job! Keep practicing to improve your language skills."
       }
     };
 
@@ -261,7 +224,7 @@ export async function generateTeachingResponse(request: TeachingRequest): Promis
     console.error('Teaching mode error:', error);
     
     // Get appropriate fallback response for the language
-    const fallbackResponse = FALLBACK_RESPONSES[language] || DEFAULT_FALLBACK;
+    const fallbackResponse = createFallbackResponse(language, "Hello, how are you?");
     
     // Return fallback response to maintain user experience
     return {
