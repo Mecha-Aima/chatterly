@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { createBrowserSupabaseClient } from '@/lib/supabaseClient';
-import {
-  SessionResponse,
-  TurnResponse,
-  SessionCreateRequest,
-  TurnCreateRequest,
+import SpeakingPractice from '@/components/audio/SpeakingPractice';
+import { 
+  SessionResponse, 
+  TurnResponse, 
+  SessionCreateRequest, 
+  TurnCreateRequest, 
   TurnUpdateRequest,
   DifficultyLevel,
   ErrorResponse
@@ -51,12 +52,39 @@ export default function SessionsPage() {
   const [lastApiCall, setLastApiCall] = useState<string>('');
   const [apiCallHistory, setApiCallHistory] = useState<string[]>([]);
   const [sessionStatus, setSessionStatus] = useState<'idle' | 'creating' | 'active' | 'completing' | 'completed'>('idle');
+  
+  // Speaking practice states
+  const [showSpeakingPractice, setShowSpeakingPractice] = useState(false);
+  const [currentPracticeSentence, setCurrentPracticeSentence] = useState('');
 
   // Teaching mode states
   const [teachingResponse, setTeachingResponse] = useState<TeachingResponse | null>(null);
   const [teachingLoading, setTeachingLoading] = useState(false);
 
 
+
+  // Start speaking practice with random sentence
+  const startSpeakingPractice = () => {
+    const sentences = getCurrentLanguageSentences();
+    const randomSentence = sentences[Math.floor(Math.random() * sentences.length)];
+    setCurrentPracticeSentence(randomSentence.sentence);
+    setShowSpeakingPractice(true);
+  };
+
+  // Get current practice sentence meaning
+  const getCurrentPracticeSentenceMeaning = () => {
+    if (!currentPracticeSentence) return '';
+    const sentences = getCurrentLanguageSentences();
+    const sentence = sentences.find(s => s.sentence === currentPracticeSentence);
+    return sentence?.meaning || '';
+  };
+
+  // Handle speaking practice completion
+  const handlePracticeComplete = (feedback: any) => {
+    console.log('Speaking practice completed:', feedback);
+    // Here you could save the feedback to the database
+    // or integrate it with the existing session system
+  };
 
   // Enhanced API Helper function with logging
   const apiCall = async <T = any>(endpoint: string, options: RequestInit = {}, description: string = ''): Promise<T> => {
@@ -712,83 +740,46 @@ export default function SessionsPage() {
                     ⏹️ Stop Auto Practice
                   </Button>
                 )}
+                <Button 
+                  onClick={startSpeakingPractice}
+                  disabled={loading}
+                  variant="default"
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  🎤 Start Speaking Practice
+                </Button>
               </>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Teaching Mode Response Display */}
-      {teachingResponse && (
-        <Card className="border-blue-200 bg-blue-50">
+      {/* Speaking Practice Section */}
+      {showSpeakingPractice && (
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              🎓 AI Teaching Response
-              {!teachingResponse.success && (
-                <span className="text-sm text-orange-600 font-normal">(Using Fallback Content)</span>
-              )}
+            <CardTitle className="flex items-center justify-between">
+              <span>🎤 Speaking Practice</span>
+              <Button 
+                onClick={() => setShowSpeakingPractice(false)}
+                variant="outline"
+                size="sm"
+              >
+                Close Practice
+              </Button>
             </CardTitle>
             <CardDescription>
-              AI-powered language instruction with pronunciation and explanation
+              Practice pronunciation with AI-powered feedback
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {teachingResponse.data && (
-              <>
-                {/* Target Sentence */}
-                <div className="bg-white p-4 rounded-lg border">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">
-                    {teachingResponse.data.sentence}
-                  </h3>
-                  <p className="text-gray-600">
-                    <strong>Meaning:</strong> {teachingResponse.data.meaning}
-                  </p>
-                </div>
-
-                {/* Pronunciation Guide */}
-                <div className="bg-white p-4 rounded-lg border">
-                  <h4 className="font-semibold text-gray-700 mb-2">🗣️ Pronunciation</h4>
-                  <p className="text-lg font-mono text-blue-700 bg-blue-50 p-2 rounded">
-                    {teachingResponse.data.pronunciation}
-                  </p>
-                </div>
-
-                {/* Teaching Explanation */}
-                <div className="bg-white p-4 rounded-lg border">
-                  <h4 className="font-semibold text-gray-700 mb-2">📚 Teaching Notes</h4>
-                  <p className="text-gray-700 leading-relaxed">
-                    {teachingResponse.data.teaching_explanation}
-                  </p>
-                </div>
-
-                {/* Encouragement */}
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <h4 className="font-semibold text-green-700 mb-2">💪 Encouragement</h4>
-                  <p className="text-green-700 italic">
-                    {teachingResponse.data.encouragement}
-                  </p>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    onClick={getTeachingResponse}
-                    disabled={teachingLoading}
-                    size="sm"
-                    variant="outline"
-                  >
-                    🔄 Get New Teaching
-                  </Button>
-                  <Button
-                    onClick={() => setTeachingResponse(null)}
-                    size="sm"
-                    variant="outline"
-                  >
-                    ✕ Clear
-                  </Button>
-                </div>
-              </>
-            )}
+          <CardContent>
+            <SpeakingPractice
+              targetSentence={currentPracticeSentence}
+              sentenceMeaning={getCurrentPracticeSentenceMeaning()}
+              language={targetLanguage}
+              difficulty={difficultyLevel.toLowerCase() as 'beginner' | 'intermediate' | 'advanced'}
+              onPracticeComplete={handlePracticeComplete}
+            />
           </CardContent>
         </Card>
       )}
