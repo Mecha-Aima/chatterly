@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { createBrowserSupabaseClient } from '@/lib/supabaseClient';
+import SpeakingPractice from '@/components/audio/SpeakingPractice';
 import { 
   SessionResponse, 
   TurnResponse, 
@@ -106,10 +107,37 @@ export default function SessionsPage() {
   const [lastApiCall, setLastApiCall] = useState<string>('');
   const [apiCallHistory, setApiCallHistory] = useState<string[]>([]);
   const [sessionStatus, setSessionStatus] = useState<'idle' | 'creating' | 'active' | 'completing' | 'completed'>('idle');
+  
+  // Speaking practice states
+  const [showSpeakingPractice, setShowSpeakingPractice] = useState(false);
+  const [currentPracticeSentence, setCurrentPracticeSentence] = useState('');
 
   // Helper: Get sentences for current language
   const getCurrentLanguageSentences = () => {
     return LANGUAGE_SENTENCES[targetLanguage as keyof typeof LANGUAGE_SENTENCES] || LANGUAGE_SENTENCES.es;
+  };
+
+  // Start speaking practice with random sentence
+  const startSpeakingPractice = () => {
+    const sentences = getCurrentLanguageSentences();
+    const randomSentence = sentences[Math.floor(Math.random() * sentences.length)];
+    setCurrentPracticeSentence(randomSentence.sentence);
+    setShowSpeakingPractice(true);
+  };
+
+  // Get current practice sentence meaning
+  const getCurrentPracticeSentenceMeaning = () => {
+    if (!currentPracticeSentence) return '';
+    const sentences = getCurrentLanguageSentences();
+    const sentence = sentences.find(s => s.sentence === currentPracticeSentence);
+    return sentence?.meaning || '';
+  };
+
+  // Handle speaking practice completion
+  const handlePracticeComplete = (feedback: any) => {
+    console.log('Speaking practice completed:', feedback);
+    // Here you could save the feedback to the database
+    // or integrate it with the existing session system
   };
 
   // Enhanced API Helper function with logging
@@ -695,11 +723,49 @@ export default function SessionsPage() {
                     ⏹️ Stop Auto Practice
                   </Button>
                 )}
+                <Button 
+                  onClick={startSpeakingPractice}
+                  disabled={loading}
+                  variant="default"
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  🎤 Start Speaking Practice
+                </Button>
               </>
             )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Speaking Practice Section */}
+      {showSpeakingPractice && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>🎤 Speaking Practice</span>
+              <Button 
+                onClick={() => setShowSpeakingPractice(false)}
+                variant="outline"
+                size="sm"
+              >
+                Close Practice
+              </Button>
+            </CardTitle>
+            <CardDescription>
+              Practice pronunciation with AI-powered feedback
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SpeakingPractice
+              targetSentence={currentPracticeSentence}
+              sentenceMeaning={getCurrentPracticeSentenceMeaning()}
+              language={targetLanguage}
+              difficulty={difficultyLevel.toLowerCase() as 'beginner' | 'intermediate' | 'advanced'}
+              onPracticeComplete={handlePracticeComplete}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sessions List */}
