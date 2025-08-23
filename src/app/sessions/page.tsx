@@ -15,66 +15,11 @@ import {
   TurnCreateRequest, 
   TurnUpdateRequest,
   DifficultyLevel,
-  ErrorResponse 
+  ErrorResponse
 } from '@/types/session.types';
+import { TeachingResponse } from '@/lib/teachingMode';
 
-// Expanded dummy data for realistic language learning testing
-const LANGUAGE_SENTENCES = {
-  es: [
-    { sentence: "Hola, ¿cómo estás?", meaning: "Hello, how are you?" },
-    { sentence: "Me llamo María", meaning: "My name is María" },
-    { sentence: "¿Dónde está el baño?", meaning: "Where is the bathroom?" },
-    { sentence: "Gracias por tu ayuda", meaning: "Thank you for your help" },
-    { sentence: "No hablo español muy bien", meaning: "I don't speak Spanish very well" },
-    { sentence: "¿Cuánto cuesta esto?", meaning: "How much does this cost?" },
-    { sentence: "Perdón, no entiendo", meaning: "Sorry, I don't understand" },
-    { sentence: "¿Puede repetir, por favor?", meaning: "Can you repeat, please?" },
-    { sentence: "¿Qué hora es?", meaning: "What time is it?" },
-    { sentence: "Tengo hambre", meaning: "I am hungry" },
-    { sentence: "¿Habla usted inglés?", meaning: "Do you speak English?" },
-    { sentence: "Necesito ayuda", meaning: "I need help" }
-  ],
-  fr: [
-    { sentence: "Bonjour, comment allez-vous?", meaning: "Hello, how are you?" },
-    { sentence: "Je m'appelle Pierre", meaning: "My name is Pierre" },
-    { sentence: "Où sont les toilettes?", meaning: "Where is the bathroom?" },
-    { sentence: "Merci beaucoup", meaning: "Thank you very much" },
-    { sentence: "Je ne parle pas bien français", meaning: "I don't speak French well" },
-    { sentence: "Combien ça coûte?", meaning: "How much does it cost?" },
-    { sentence: "Excusez-moi, je ne comprends pas", meaning: "Excuse me, I don't understand" },
-    { sentence: "Pouvez-vous répéter?", meaning: "Can you repeat?" }
-  ],
-  de: [
-    { sentence: "Hallo, wie geht es Ihnen?", meaning: "Hello, how are you?" },
-    { sentence: "Ich heiße Hans", meaning: "My name is Hans" },
-    { sentence: "Wo ist die Toilette?", meaning: "Where is the bathroom?" },
-    { sentence: "Vielen Dank", meaning: "Thank you very much" },
-    { sentence: "Ich spreche nicht gut Deutsch", meaning: "I don't speak German well" },
-    { sentence: "Wie viel kostet das?", meaning: "How much does it cost?" },
-    { sentence: "Entschuldigung, ich verstehe nicht", meaning: "Sorry, I don't understand" },
-    { sentence: "Können Sie das wiederholen?", meaning: "Can you repeat that?" }
-  ],
-  it: [
-    { sentence: "Ciao, come stai?", meaning: "Hello, how are you?" },
-    { sentence: "Mi chiamo Marco", meaning: "My name is Marco" },
-    { sentence: "Dov'è il bagno?", meaning: "Where is the bathroom?" },
-    { sentence: "Grazie mille", meaning: "Thank you very much" },
-    { sentence: "Non parlo bene italiano", meaning: "I don't speak Italian well" },
-    { sentence: "Quanto costa?", meaning: "How much does it cost?" },
-    { sentence: "Scusi, non capisco", meaning: "Sorry, I don't understand" },
-    { sentence: "Può ripetere?", meaning: "Can you repeat?" }
-  ],
-  pt: [
-    { sentence: "Olá, como está?", meaning: "Hello, how are you?" },
-    { sentence: "Meu nome é João", meaning: "My name is João" },
-    { sentence: "Onde fica o banheiro?", meaning: "Where is the bathroom?" },
-    { sentence: "Muito obrigado", meaning: "Thank you very much" },
-    { sentence: "Não falo português muito bem", meaning: "I don't speak Portuguese very well" },
-    { sentence: "Quanto custa?", meaning: "How much does it cost?" },
-    { sentence: "Desculpe, não entendo", meaning: "Sorry, I don't understand" },
-    { sentence: "Pode repetir?", meaning: "Can you repeat?" }
-  ]
-};
+
 
 const LANGUAGES = [
   { code: 'es', name: 'Spanish' },
@@ -99,7 +44,7 @@ export default function SessionsPage() {
   const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>(DifficultyLevel.BEGINNER);
   const [currentTurnNumber, setCurrentTurnNumber] = useState(1);
   const [userTranscript, setUserTranscript] = useState('');
-  
+
   // Session testing states
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [practiceMode, setPracticeMode] = useState<'manual' | 'auto'>('manual');
@@ -112,10 +57,11 @@ export default function SessionsPage() {
   const [showSpeakingPractice, setShowSpeakingPractice] = useState(false);
   const [currentPracticeSentence, setCurrentPracticeSentence] = useState('');
 
-  // Helper: Get sentences for current language
-  const getCurrentLanguageSentences = () => {
-    return LANGUAGE_SENTENCES[targetLanguage as keyof typeof LANGUAGE_SENTENCES] || LANGUAGE_SENTENCES.es;
-  };
+  // Teaching mode states
+  const [teachingResponse, setTeachingResponse] = useState<TeachingResponse | null>(null);
+  const [teachingLoading, setTeachingLoading] = useState(false);
+
+
 
   // Start speaking practice with random sentence
   const startSpeakingPractice = () => {
@@ -148,11 +94,11 @@ export default function SessionsPage() {
 
     const method = options.method || 'GET';
     const apiCallDescription = `${method} ${endpoint}${description ? ` - ${description}` : ''}`;
-    
+
     // Log API call
     setLastApiCall(apiCallDescription);
     setApiCallHistory(prev => [`${new Date().toLocaleTimeString()}: ${apiCallDescription}`, ...prev.slice(0, 9)]);
-    
+
     console.log(`🔗 API Call: ${apiCallDescription}`);
 
     const response = await fetch(endpoint, {
@@ -187,7 +133,7 @@ export default function SessionsPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       if (!token) {
         throw new Error('No auth token available');
       }
@@ -227,13 +173,13 @@ export default function SessionsPage() {
         setAuthLoading(true);
         const supabase = createBrowserSupabaseClient();
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError) {
           console.error('Auth session error:', sessionError);
           setError('Authentication error occurred');
           return;
         }
-        
+
         if (session?.access_token) {
           console.log('✅ Authentication successful, user ID:', session.user.id);
           setAuthToken(session.access_token);
@@ -250,7 +196,7 @@ export default function SessionsPage() {
         setAuthLoading(false);
       }
     };
-    
+
     initializeAuth();
 
     // Listen for auth state changes
@@ -258,7 +204,7 @@ export default function SessionsPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
-        
+
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.access_token) {
             setAuthToken(session.access_token);
@@ -291,13 +237,55 @@ export default function SessionsPage() {
     };
   }, [autoInterval]);
 
+  // Teaching mode function
+  const getTeachingResponse = async () => {
+    if (!authToken) {
+      setError('Authentication required for teaching mode');
+      return;
+    }
+
+    try {
+      setTeachingLoading(true);
+      setError(null);
+
+      const teachingRequestBody = {
+        language: targetLanguage,
+        difficulty: difficultyLevel,
+        turnNumber: currentTurnNumber,
+        sessionContext: {
+          previousSentences: turns.map(turn => turn.target_sentence),
+          userProgress: `${turns.filter(t => t.turn_completed).length} completed turns`
+        }
+      };
+
+      const response = await apiCall<TeachingResponse>('/api/teaching', {
+        method: 'POST',
+        body: JSON.stringify(teachingRequestBody),
+      }, 'Get AI teaching response');
+
+      setTeachingResponse(response);
+
+      if (!response.success && response.error) {
+        setError(`Teaching mode error: ${response.error}`);
+      }
+
+      console.log('✅ Teaching response generated:', response);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to get teaching response: ${errorMessage}`);
+      console.error('Teaching mode error:', err);
+    } finally {
+      setTeachingLoading(false);
+    }
+  };
+
   // 2. POST /api/sessions - Create new session and start it
   const startNewSession = async () => {
     try {
       setLoading(true);
       setError(null);
       setSessionStatus('creating');
-      
+
       const sessionData: SessionCreateRequest = {
         target_language: targetLanguage,
         difficulty_level: difficultyLevel,
@@ -315,7 +303,11 @@ export default function SessionsPage() {
       setTurns([]);
       setIsSessionActive(true);
       setSessionStatus('active');
-      
+      setTeachingResponse(null); // Clear any previous teaching response
+
+      // Automatically get teaching response when starting a new session
+      await getTeachingResponse();
+
       console.log('✅ New session started:', newSession.id);
     } catch (err) {
       setError(`Failed to start session: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -343,17 +335,17 @@ export default function SessionsPage() {
   // 4. PATCH /api/sessions/[sessionId] - Update session (example with difficulty change)
   const updateSessionDifficulty = async (newDifficulty: DifficultyLevel) => {
     if (!currentSession) return;
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const updateData = { difficulty_level: newDifficulty };
       const updatedSession = await apiCall<SessionResponse>(`/api/sessions/${currentSession.id}`, {
         method: 'PATCH',
         body: JSON.stringify(updateData),
       }, `Update session difficulty to ${newDifficulty}`);
-      
+
       setCurrentSession(updatedSession);
       setDifficultyLevel(newDifficulty);
       console.log('✅ Session difficulty updated:', newDifficulty);
@@ -372,14 +364,31 @@ export default function SessionsPage() {
       setLoading(true);
       setError(null);
 
-      const sentences = getCurrentLanguageSentences();
-      const randomSentence = sentences[Math.floor(Math.random() * sentences.length)];
-      
+      // First get a teaching response to get the sentence
+      const teachingRequestBody = {
+        language: targetLanguage,
+        difficulty: difficultyLevel,
+        turnNumber: currentTurnNumber,
+        sessionContext: {
+          previousSentences: turns.map(turn => turn.target_sentence),
+          userProgress: `${turns.filter(t => t.turn_completed).length} completed turns`
+        }
+      };
+
+      const teachingResponse = await apiCall<TeachingResponse>('/api/teaching', {
+        method: 'POST',
+        body: JSON.stringify(teachingRequestBody),
+      }, 'Get sentence for new turn');
+
+      if (!teachingResponse.success || !teachingResponse.data) {
+        throw new Error('Failed to get teaching content for turn');
+      }
+
       const turnData: TurnCreateRequest = {
         session_id: currentSession.id,
         turn_number: currentTurnNumber,
-        target_sentence: randomSentence.sentence,
-        sentence_meaning: randomSentence.meaning
+        target_sentence: teachingResponse.data.sentence,
+        sentence_meaning: teachingResponse.data.meaning
       };
 
       const newTurn = await apiCall<TurnResponse>(`/api/sessions/${currentSession.id}/turns`, {
@@ -442,10 +451,10 @@ export default function SessionsPage() {
         user_transcript: userInput || userTranscript || `${targetSentence} (auto-generated response)`,
         pronunciation_feedback_json: {
           overall_score: pronunciationScore,
-          feedback: pronunciationScore > 90 ? "Excellent pronunciation!" : 
-                   pronunciationScore > 80 ? "Good pronunciation!" : 
-                   pronunciationScore > 70 ? "Pronunciation needs improvement" : 
-                   "Keep practicing!",
+          feedback: pronunciationScore > 90 ? "Excellent pronunciation!" :
+            pronunciationScore > 80 ? "Good pronunciation!" :
+              pronunciationScore > 70 ? "Pronunciation needs improvement" :
+                "Keep practicing!",
           detailed_feedback: {
             clarity: pronunciationScore,
             accent: Math.max(60, pronunciationScore - 10),
@@ -454,9 +463,9 @@ export default function SessionsPage() {
         },
         grammar_feedback_json: {
           overall_score: grammarScore,
-          feedback: grammarScore > 90 ? "Perfect grammar!" : 
-                   grammarScore > 80 ? "Very good grammar" : 
-                   "Grammar needs some work",
+          feedback: grammarScore > 90 ? "Perfect grammar!" :
+            grammarScore > 80 ? "Very good grammar" :
+              "Grammar needs some work",
           corrections: grammarScore < 85 ? ["Minor verb conjugation error"] : []
         },
         turn_completed: true
@@ -498,7 +507,8 @@ export default function SessionsPage() {
       setCurrentTurnNumber(1);
       setIsSessionActive(false);
       setSessionStatus('completed');
-      
+      setTeachingResponse(null); // Clear teaching response when session ends
+
       // Show completion summary
       if (result.summary) {
         setError(null); // Clear any previous errors to show success message
@@ -515,7 +525,7 @@ export default function SessionsPage() {
   // Auto practice mode
   const startAutoPractice = () => {
     if (!currentSession || autoInterval) return;
-    
+
     setPracticeMode('auto');
     const interval = setInterval(async () => {
       // Create a turn and immediately complete it
@@ -529,7 +539,7 @@ export default function SessionsPage() {
         }
       }, 1000);
     }, 3000); // Every 3 seconds
-    
+
     setAutoInterval(interval);
   };
 
@@ -547,7 +557,7 @@ export default function SessionsPage() {
     setIsSessionActive(!session.ended_at);
     setSessionStatus(session.ended_at ? 'completed' : 'active');
     await fetchTurns(session.id);
-    
+
     // Set the next turn number based on existing turns
     const maxTurn = Math.max(...turns.map(t => t.turn_number), 0);
     setCurrentTurnNumber(maxTurn + 1);
@@ -590,7 +600,7 @@ export default function SessionsPage() {
           </CardHeader>
           <CardContent className="p-4">
             <p className="text-yellow-700">
-              You need to be logged in to test the session management features. 
+              You need to be logged in to test the session management features.
               Please go to the login page to authenticate.
             </p>
           </CardContent>
@@ -610,13 +620,12 @@ export default function SessionsPage() {
           <Button onClick={() => fetchSessions()} disabled={loading} variant="outline">
             🔄 Refresh Sessions
           </Button>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            sessionStatus === 'active' ? 'bg-green-100 text-green-700' :
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${sessionStatus === 'active' ? 'bg-green-100 text-green-700' :
             sessionStatus === 'creating' ? 'bg-blue-100 text-blue-700' :
-            sessionStatus === 'completing' ? 'bg-orange-100 text-orange-700' :
-            sessionStatus === 'completed' ? 'bg-purple-100 text-purple-700' :
-            'bg-gray-100 text-gray-600'
-          }`}>
+              sessionStatus === 'completing' ? 'bg-orange-100 text-orange-700' :
+                sessionStatus === 'completed' ? 'bg-purple-100 text-purple-700' :
+                  'bg-gray-100 text-gray-600'
+            }`}>
             {sessionStatus.charAt(0).toUpperCase() + sessionStatus.slice(1)}
           </span>
         </div>
@@ -670,8 +679,8 @@ export default function SessionsPage() {
             </div>
             <div className="flex items-end">
               {currentSession && isSessionActive && (
-                <Button 
-                  onClick={() => updateSessionDifficulty(difficultyLevel)} 
+                <Button
+                  onClick={() => updateSessionDifficulty(difficultyLevel)}
                   disabled={loading}
                   variant="outline"
                   className="w-full"
@@ -681,11 +690,11 @@ export default function SessionsPage() {
               )}
             </div>
           </div>
-          
+
           <div className="flex flex-wrap gap-2">
             {!isSessionActive ? (
-              <Button 
-                onClick={startNewSession} 
+              <Button
+                onClick={startNewSession}
                 disabled={loading}
                 className="bg-green-600 hover:bg-green-700"
               >
@@ -693,30 +702,38 @@ export default function SessionsPage() {
               </Button>
             ) : (
               <>
-                <Button 
-                  onClick={completeSession} 
+                <Button
+                  onClick={completeSession}
                   disabled={loading || !currentSession || (currentSession.total_turns || 0) === 0}
                   variant="destructive"
                 >
                   {loading && sessionStatus === 'completing' ? '⏳ Ending...' : '🏁 End Session'}
                 </Button>
-                <Button 
-                  onClick={createTurn} 
+                <Button
+                  onClick={createTurn}
                   disabled={loading}
                   variant="outline"
                 >
                   ➕ Add Practice Turn
                 </Button>
+                <Button
+                  onClick={getTeachingResponse}
+                  disabled={teachingLoading || loading}
+                  variant="outline"
+                  className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                >
+                  {teachingLoading ? '⏳ Getting Teaching...' : '🎓 Get AI Teaching'}
+                </Button>
                 {practiceMode === 'manual' ? (
-                  <Button 
-                    onClick={startAutoPractice} 
+                  <Button
+                    onClick={startAutoPractice}
                     disabled={loading}
                     variant="outline"
                   >
                     🤖 Start Auto Practice
                   </Button>
                 ) : (
-                  <Button 
+                  <Button
                     onClick={stopAutoPractice}
                     variant="outline"
                   >
@@ -786,9 +803,8 @@ export default function SessionsPage() {
                   <div
                     key={session.id}
                     onClick={() => selectSession(session)}
-                    className={`p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-                      currentSession?.id === session.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                    }`}
+                    className={`p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${currentSession?.id === session.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                      }`}
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -808,11 +824,10 @@ export default function SessionsPage() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className={`text-xs px-2 py-1 rounded font-medium ${
-                          session.ended_at ? 'bg-green-100 text-green-700' : 
-                          session.started_at ? 'bg-yellow-100 text-yellow-700' : 
-                          'bg-gray-100 text-gray-600'
-                        }`}>
+                        <span className={`text-xs px-2 py-1 rounded font-medium ${session.ended_at ? 'bg-green-100 text-green-700' :
+                          session.started_at ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>
                           {getSessionStatus(session)}
                         </span>
                         <p className="text-xs text-gray-500 mt-1">
@@ -871,16 +886,16 @@ export default function SessionsPage() {
 
                 {/* Session Actions */}
                 <div className="flex flex-wrap gap-2">
-                  <Button 
-                    onClick={() => fetchSpecificSession(currentSession.id)} 
+                  <Button
+                    onClick={() => fetchSpecificSession(currentSession.id)}
                     disabled={loading}
                     size="sm"
                     variant="outline"
                   >
                     🔄 Refresh Session
                   </Button>
-                  <Button 
-                    onClick={() => fetchTurns(currentSession.id)} 
+                  <Button
+                    onClick={() => fetchTurns(currentSession.id)}
                     disabled={loading}
                     size="sm"
                     variant="outline"
@@ -899,7 +914,7 @@ export default function SessionsPage() {
                       API: Turns endpoints
                     </span>
                   </div>
-                  
+
                   <div className="space-y-3 max-h-64 overflow-y-auto">
                     {turns.length === 0 ? (
                       <div className="text-center py-4 text-gray-500 text-sm">
@@ -934,8 +949,8 @@ export default function SessionsPage() {
                                   )}
                                 </div>
                               ) : (
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   onClick={() => completeTurn(turn.id, turn.target_sentence)}
                                   disabled={loading}
                                 >
@@ -944,7 +959,7 @@ export default function SessionsPage() {
                               )}
                             </div>
                           </div>
-                          
+
                           {/* User input for incomplete turns */}
                           {!turn.turn_completed && (
                             <div className="mt-2">
@@ -996,7 +1011,7 @@ export default function SessionsPage() {
         <CardContent>
           <div className="space-y-2">
             <div className="text-sm">
-              <strong>Last API Call:</strong> 
+              <strong>Last API Call:</strong>
               <span className="ml-2 font-mono text-blue-600">{lastApiCall || 'None'}</span>
             </div>
             <div className="max-h-32 overflow-y-auto bg-gray-50 p-2 rounded text-xs font-mono">
@@ -1012,66 +1027,6 @@ export default function SessionsPage() {
         </CardContent>
       </Card>
 
-      {/* API Endpoints Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle>🛠️ API Endpoints Reference</CardTitle>
-          <CardDescription>All implemented session management endpoints with their usage</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-            <div className="space-y-1 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="font-medium text-green-700">✅ POST /api/sessions</p>
-              <p className="text-xs text-green-600">Create new session (Start New Session button)</p>
-            </div>
-            <div className="space-y-1 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="font-medium text-green-700">✅ GET /api/sessions</p>
-              <p className="text-xs text-green-600">Fetch all sessions (Sessions list)</p>
-            </div>
-            <div className="space-y-1 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="font-medium text-green-700">✅ GET /api/sessions/:id</p>
-              <p className="text-xs text-green-600">Get specific session (Refresh Session)</p>
-            </div>
-            <div className="space-y-1 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="font-medium text-green-700">✅ PATCH /api/sessions/:id</p>
-              <p className="text-xs text-green-600">Update session (Update Difficulty)</p>
-            </div>
-            <div className="space-y-1 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="font-medium text-green-700">✅ POST /api/sessions/:id/complete</p>
-              <p className="text-xs text-green-600">Complete session (End Session button)</p>
-            </div>
-            <div className="space-y-1 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="font-medium text-green-700">✅ POST /api/sessions/:id/turns</p>
-              <p className="text-xs text-green-600">Create turn (Add Practice Turn)</p>
-            </div>
-            <div className="space-y-1 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="font-medium text-green-700">✅ GET /api/sessions/:id/turns</p>
-              <p className="text-xs text-green-600">Get session turns (Refresh Turns)</p>
-            </div>
-            <div className="space-y-1 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="font-medium text-green-700">✅ GET /api/sessions/:id/turns/:id</p>
-              <p className="text-xs text-green-600">Get specific turn (Fetch Details)</p>
-            </div>
-            <div className="space-y-1 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="font-medium text-green-700">✅ PATCH /api/sessions/:id/turns/:id</p>
-              <p className="text-xs text-green-600">Update turn (Complete Turn)</p>
-            </div>
-          </div>
-          
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-medium text-blue-700 mb-2">🧪 How to Test:</h4>
-            <ol className="text-sm text-blue-600 space-y-1">
-              <li>1. <strong>Start Session:</strong> Select language/difficulty and click "Start New Session"</li>
-              <li>2. <strong>Practice:</strong> Click "Add Practice Turn" to create learning exercises</li>
-              <li>3. <strong>Complete Turns:</strong> Type responses or use auto-complete for each turn</li>
-              <li>4. <strong>Auto Mode:</strong> Use "Start Auto Practice" for continuous turn creation/completion</li>
-              <li>5. <strong>Update Session:</strong> Change difficulty level while session is active</li>
-              <li>6. <strong>End Session:</strong> Click "End Session" to complete and see summary</li>
-              <li>7. <strong>Monitor:</strong> Watch API calls in real-time and check browser console for detailed logs</li>
-            </ol>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

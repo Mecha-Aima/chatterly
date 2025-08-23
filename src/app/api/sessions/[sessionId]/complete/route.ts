@@ -8,6 +8,7 @@ import {
   SessionErrorHandler,
   GlobalErrorHandler 
 } from '@/lib/errorHandling';
+import { updateSessionProgress } from '@/lib/progressCalculation';
 
 export async function POST(
   request: NextRequest,
@@ -128,6 +129,12 @@ export async function POST(
 
     // Badge evaluation will be triggered automatically by database triggers
     // No need to manually call badge functions here
+
+    // Update session progress with detailed metrics (async, don't block response)
+    updateSessionProgress(sessionId).catch(error => {
+      console.error('Error updating session progress:', error);
+      // Don't throw error here as session completion should still succeed
+    });
 
     // Return completion summary
     return NextResponse.json({
