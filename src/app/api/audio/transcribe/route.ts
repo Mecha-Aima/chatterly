@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
       interim_results: false
     };
 
+    console.log('Deepgram request options:', options);
+
     // Build query parameters
     const queryParams = new URLSearchParams();
     Object.entries(options).forEach(([key, value]) => {
@@ -111,6 +113,9 @@ export async function POST(request: NextRequest) {
     // Parse Deepgram response
     const deepgramData = await deepgramResponse.json();
     
+    // Log the actual response for debugging
+    console.log('Deepgram response structure:', JSON.stringify(deepgramData, null, 2));
+    
     // Process and format the response
     const transcription = processDeepgramResponse(deepgramData, body.language);
 
@@ -129,12 +134,28 @@ export async function POST(request: NextRequest) {
  * Process Deepgram API response into standardized format
  */
 function processDeepgramResponse(response: any, language: string): AudioTranscriptionResponse {
-  const results = response.results;
+  console.log('Processing Deepgram response:', JSON.stringify(response, null, 2));
+
+  // Handle different response formats from Deepgram API
+  let results = response.results;
+  
+  // Check if results is an object with channels directly (new format)
+  if (response.results && response.results.channels) {
+    results = [response.results];
+  }
+  
   if (!results || results.length === 0) {
     throw new Error('No transcription results received from Deepgram');
   }
 
   const result = results[0];
+  
+  // Validate the expected structure exists
+  if (!result.channels || !result.channels[0] || !result.channels[0].alternatives || !result.channels[0].alternatives[0]) {
+    console.error('Unexpected Deepgram response structure:', result);
+    throw new Error('Invalid response structure from Deepgram API');
+  }
+
   const transcript = result.channels[0].alternatives[0].transcript;
   const confidence = result.channels[0].alternatives[0].confidence;
   
