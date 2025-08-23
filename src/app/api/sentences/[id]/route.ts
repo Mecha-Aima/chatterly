@@ -3,8 +3,8 @@ import { supabaseServer } from '@/lib/supabaseServer';
 import { createClient } from '@supabase/supabase-js';
 
 // GET /api/sentences/[id]
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const id = params.id;
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
   const authHeader = req.headers.get('authorization');
