@@ -19,7 +19,62 @@ import {
 } from '@/types/session.types';
 import { TeachingResponse } from '@/lib/teachingMode';
 
-
+const LANGUAGE_SENTENCES = {
+  es: [
+    { sentence: "Hola, ¿cómo estás?", meaning: "Hello, how are you?" },
+    { sentence: "Me llamo María", meaning: "My name is María" },
+    { sentence: "¿Dónde está el baño?", meaning: "Where is the bathroom?" },
+    { sentence: "Gracias por tu ayuda", meaning: "Thank you for your help" },
+    { sentence: "No hablo español muy bien", meaning: "I don't speak Spanish very well" },
+    { sentence: "¿Cuánto cuesta esto?", meaning: "How much does this cost?" },
+    { sentence: "Perdón, no entiendo", meaning: "Sorry, I don't understand" },
+    { sentence: "¿Puede repetir, por favor?", meaning: "Can you repeat, please?" },
+    { sentence: "¿Qué hora es?", meaning: "What time is it?" },
+    { sentence: "Tengo hambre", meaning: "I am hungry" },
+    { sentence: "¿Habla usted inglés?", meaning: "Do you speak English?" },
+    { sentence: "Necesito ayuda", meaning: "I need help" }
+  ],
+  fr: [
+    { sentence: "Bonjour, comment allez-vous?", meaning: "Hello, how are you?" },
+    { sentence: "Je m'appelle Pierre", meaning: "My name is Pierre" },
+    { sentence: "Où sont les toilettes?", meaning: "Where is the bathroom?" },
+    { sentence: "Merci beaucoup", meaning: "Thank you very much" },
+    { sentence: "Je ne parle pas bien français", meaning: "I don't speak French well" },
+    { sentence: "Combien ça coûte?", meaning: "How much does it cost?" },
+    { sentence: "Excusez-moi, je ne comprends pas", meaning: "Excuse me, I don't understand" },
+    { sentence: "Pouvez-vous répéter?", meaning: "Can you repeat?" }
+  ],
+  de: [
+    { sentence: "Hallo, wie geht es Ihnen?", meaning: "Hello, how are you?" },
+    { sentence: "Ich heiße Hans", meaning: "My name is Hans" },
+    { sentence: "Wo ist die Toilette?", meaning: "Where is the bathroom?" },
+    { sentence: "Vielen Dank", meaning: "Thank you very much" },
+    { sentence: "Ich spreche nicht gut Deutsch", meaning: "I don't speak German well" },
+    { sentence: "Wie viel kostet das?", meaning: "How much does it cost?" },
+    { sentence: "Entschuldigung, ich verstehe nicht", meaning: "Sorry, I don't understand" },
+    { sentence: "Können Sie das wiederholen?", meaning: "Can you repeat that?" }
+  ],
+  it: [
+    { sentence: "Ciao, come stai?", meaning: "Hello, how are you?" },
+    { sentence: "Mi chiamo Marco", meaning: "My name is Marco" },
+    { sentence: "Dov'è il bagno?", meaning: "Where is the bathroom?" },
+    { sentence: "Grazie mille", meaning: "Thank you very much" },
+    { sentence: "Non parlo bene italiano", meaning: "I don't speak Italian well" },
+    { sentence: "Quanto costa?", meaning: "How much does it cost?" },
+    { sentence: "Scusi, non capisco", meaning: "Sorry, I don't understand" },
+    { sentence: "Può ripetere?", meaning: "Can you repeat?" }
+  ],
+  pt: [
+    { sentence: "Olá, como está?", meaning: "Hello, how are you?" },
+    { sentence: "Meu nome é João", meaning: "My name is João" },
+    { sentence: "Onde fica o banheiro?", meaning: "Where is the bathroom?" },
+    { sentence: "Muito obrigado", meaning: "Thank you very much" },
+    { sentence: "Não falo português muito bem", meaning: "I don't speak Portuguese very well" },
+    { sentence: "Quanto custa?", meaning: "How much does it cost?" },
+    { sentence: "Desculpe, não entendo", meaning: "Sorry, I don't understand" },
+    { sentence: "Pode repetir?", meaning: "Can you repeat?" }
+  ]
+};
 
 const LANGUAGES = [
   { code: 'es', name: 'Spanish' },
@@ -61,7 +116,8 @@ export default function SessionsPage() {
   const [teachingResponse, setTeachingResponse] = useState<TeachingResponse | null>(null);
   const [teachingLoading, setTeachingLoading] = useState(false);
 
-
+  const getCurrentLanguageSentences = () => {
+    return LANGUAGE_SENTENCES[targetLanguage as keyof typeof LANGUAGE_SENTENCES] || LANGUAGE_SENTENCES.es; };
 
   // Start speaking practice with random sentence
   const startSpeakingPractice = () => {
