@@ -3,12 +3,14 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
+import { useDashboardData } from '@/hooks/useDashboardData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, MessageCircle, User, Settings, Calendar, Award } from 'lucide-react';
+import { LogOut, MessageCircle, User, Settings, Calendar, Award, TrendingUp, Target, Flame, Trophy } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, loading, signOut } = useAuth();
+  const { badges, progress, loading: dataLoading } = useDashboardData();
   const router = useRouter();
 
   useEffect(() => {
@@ -106,13 +108,26 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all cursor-pointer">
+          <Card 
+            className="border-0 shadow-lg bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all cursor-pointer"
+            onClick={() => router.push('/profile')}
+          >
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-3 relative">
                 <Award className="h-6 w-6 text-primary" />
+                {badges && badges.earned_badges.length > 0 && (
+                  <div className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {badges.earned_badges.length}
+                  </div>
+                )}
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Progress</h3>
-              <p className="text-sm text-gray-600">Track achievements</p>
+              <h3 className="font-semibold text-gray-900 mb-1">Profile</h3>
+              <p className="text-sm text-gray-600">
+                {badges && badges.earned_badges.length > 0 
+                  ? `${badges.earned_badges.length} badges earned`
+                  : 'View badges & progress'
+                }
+              </p>
             </CardContent>
           </Card>
 
@@ -174,17 +189,91 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Award className="h-5 w-5 text-primary" />
-                <span>Learning Stats</span>
+                <span>Learning Progress</span>
               </CardTitle>
-              <CardDescription>Your language learning progress</CardDescription>
+              <CardDescription>Your language learning achievements and stats</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">🚀 Ready to start your journey?</p>
-                <Button className="w-full">
-                  Begin First Lesson
-                </Button>
-              </div>
+              {dataLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p className="text-gray-500 text-sm">Loading your progress...</p>
+                </div>
+              ) : progress && progress.overall_stats.total_sessions > 0 ? (
+                <div className="space-y-4">
+                  {/* Progress Stats Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                      <div className="flex items-center justify-center mb-1">
+                        <Target className="h-4 w-4 text-blue-600 mr-1" />
+                        <span className="text-sm font-medium text-blue-900">Sessions</span>
+                      </div>
+                      <p className="text-lg font-bold text-blue-900">{progress.overall_stats.completed_sessions}</p>
+                    </div>
+                    <div className="text-center p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+                      <div className="flex items-center justify-center mb-1">
+                        <Flame className="h-4 w-4 text-orange-600 mr-1" />
+                        <span className="text-sm font-medium text-orange-900">Streak</span>
+                      </div>
+                      <p className="text-lg font-bold text-orange-900">{progress.overall_stats.current_streak} days</p>
+                    </div>
+                    <div className="text-center p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                      <div className="flex items-center justify-center mb-1">
+                        <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
+                        <span className="text-sm font-medium text-green-900">Accuracy</span>
+                      </div>
+                      <p className="text-lg font-bold text-green-900">{Math.round(progress.performance_metrics.completion_rate)}%</p>
+                    </div>
+                    <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                      <div className="flex items-center justify-center mb-1">
+                        <Trophy className="h-4 w-4 text-purple-600 mr-1" />
+                        <span className="text-sm font-medium text-purple-900">Badges</span>
+                      </div>
+                      <p className="text-lg font-bold text-purple-900">{badges?.earned_badges.length || 0}</p>
+                    </div>
+                  </div>
+
+                  {/* Recent Achievements */}
+                  {badges && badges.earned_badges.length > 0 && (
+                    <div className="border-t pt-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Achievements</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {badges.earned_badges.slice(0, 3).map((badge) => (
+                          <div
+                            key={badge.id}
+                            className="flex items-center space-x-2 bg-yellow-50 border border-yellow-200 rounded-full px-3 py-1"
+                          >
+                            <Award className="h-3 w-3 text-yellow-600" />
+                            <span className="text-xs font-medium text-yellow-800">{badge.definition.name}</span>
+                          </div>
+                        ))}
+                        {badges.earned_badges.length > 3 && (
+                          <div className="flex items-center space-x-1 text-xs text-gray-500">
+                            <span>+{badges.earned_badges.length - 3} more</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <Button 
+                    className="w-full" 
+                    onClick={() => router.push('/sessions')}
+                  >
+                    Continue Learning
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">🚀 Ready to start your journey?</p>
+                  <Button 
+                    className="w-full"
+                    onClick={() => router.push('/sessions')}
+                  >
+                    Begin First Lesson
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

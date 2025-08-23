@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseServer';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import supabaseAdmin from '@/lib/supabaseAdmin';
 import { createClient } from '@supabase/supabase-js';
 
 // GET /api/sentences?language=..&difficulty=..&category=..&limit=..
