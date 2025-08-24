@@ -65,7 +65,7 @@ export function ProgressStats({ progress, className }: ProgressStatsProps) {
       {/* Primary Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
-          title="Total Sessions"
+          title="Total Lessons"
           value={progress.overall_stats.total_sessions}
           icon={<BookOpen className="h-5 w-5 text-primary" />}
           subtitle={getSessionsSubtitle()}
@@ -101,7 +101,7 @@ export function ProgressStats({ progress, className }: ProgressStatsProps) {
           value={formatPercentage(progress.performance_metrics.average_pronunciation_score)}
           icon={<MessageCircle className="h-5 w-5 text-purple-500" />}
           trend={progress.detailed_metrics.pronunciation_trend}
-          subtitle="Average across all sessions"
+          subtitle="Average across all lessons"
         />
         
         <StatCard
@@ -116,7 +116,7 @@ export function ProgressStats({ progress, className }: ProgressStatsProps) {
           title="Learning Velocity"
           value={`${progress.performance_metrics.learning_velocity.toFixed(1)}`}
           icon={<TrendingUp className="h-5 w-5 text-cyan-500" />}
-          subtitle="Sessions per week"
+          subtitle="Lessons per week"
         />
         
         <StatCard
@@ -131,20 +131,20 @@ export function ProgressStats({ progress, className }: ProgressStatsProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           title="This Week"
-          value={`${progress.recent_activity.sessions_this_week} sessions`}
+          value={`${progress.recent_activity.sessions_this_week} lessons`}
           icon={<Calendar className="h-5 w-5 text-blue-600" />}
           subtitle="Keep up the momentum!"
         />
         
         <StatCard
           title="This Month"
-          value={`${progress.recent_activity.sessions_this_month} sessions`}
+          value={`${progress.recent_activity.sessions_this_month} lessons`}
           icon={<BookOpen className="h-5 w-5 text-green-600" />}
           subtitle={`${progress.recent_activity.badges_earned_this_month} badges earned`}
         />
         
         <StatCard
-          title="Last Session"
+          title="Last Lesson"
           value={
             progress.recent_activity.last_session_date
               ? new Date(progress.recent_activity.last_session_date).toLocaleDateString()
