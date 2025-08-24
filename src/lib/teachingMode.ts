@@ -74,7 +74,7 @@ const createTeachingPrompt = (
   const difficultyGuide = DIFFICULTY_GUIDELINES[difficulty as keyof typeof DIFFICULTY_GUIDELINES] || DIFFICULTY_GUIDELINES.beginner;
   
   if (requestType === 'explanation') {
-    const explanationPrompt = `You are a friendly and encouraging language tutor. You will provide a brief teaching explanation for a sentence in a target language.
+    const explanationPrompt = `You are an English-speaking language tutor teaching ${language} to English speakers. You will provide a brief teaching explanation ENTIRELY IN ENGLISH for a sentence in the target language.
 
 Target Language: ${language}
 Difficulty Level: ${difficulty}
@@ -82,9 +82,11 @@ Sentence to teach: ${sentence}
 ${turnNumber ? `Turn Number: ${turnNumber}` : ''}
 ${sessionContext?.previousSentences?.length ? `Previous sentences in this session: ${sessionContext.previousSentences.join(', ')}` : ''}
 
+CRITICAL: Your response MUST be written completely in ENGLISH. Do not write any words in ${language} except when quoting the sentence being taught. This is for English-speaking students learning ${language}.
+
 IMPORTANT: Respond with ONLY plain text. Do not use JSON, markdown formatting, code blocks, or any other structured format.
 
-Please provide a brief teaching explanation that covers:
+Please provide a brief teaching explanation IN ENGLISH that covers:
 - Grammar structures and usage patterns
 - Cultural context when relevant
 - Practical usage tips
@@ -98,10 +100,11 @@ General Guidelines:
 - Focus on practical usage and real-world application
 - Use positive, supportive language
 - Make it appropriate for ${difficulty} level learners
+- Write your ENTIRE explanation in English only
 ${turnNumber && turnNumber > 1 ? '- Reference previous learning when appropriate to create continuity' : ''}
 ${sessionContext?.previousSentences?.length ? '- Avoid repeating explanations from previous sentences in this session' : ''}
 
-Provide only the teaching explanation as plain text.`;
+Remember: Respond only in English. Your explanation should help English speakers understand the ${language} sentence.`;
 
     return explanationPrompt;
   } else {
@@ -243,49 +246,34 @@ export async function generateTeachingResponse(request: TeachingRequest): Promis
       userInput
     );
 
-    const user_prompt = requestType === 'explanation' 
-      ? `Please provide the teaching explanation for this sentence.`
-      : `Please provide personalized feedback for the student's pronunciation attempt.`;
-
-    // Step 3: Call OpenAI Responses API with GPT-5
-    const aiResponse = await openai.responses.create({
-      model: 'gpt-5-mini',
-      instructions: prompt,
-      input: user_prompt,
-      max_output_tokens: 500,
+    // Step 3: Call OpenAI Chat Completions API with GPT-4o-mini
+    const aiResponse = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: prompt
+        },
+        {
+          role: 'user', 
+          content: requestType === 'explanation' 
+            ? `Please provide the teaching explanation for this sentence.`
+            : `Please provide personalized feedback for the student's pronunciation attempt.`
+        }
+      ],
+      max_tokens: 1500,
       temperature: 0.7,
-      reasoning: {
-        "effort": "low",
-      }
     });
 
-    if (aiResponse.status !== 'completed') {
-      throw new Error(`OpenAI Responses API call failed with status: ${aiResponse.status}`);
+    if (!aiResponse.choices || aiResponse.choices.length === 0) {
+      throw new Error('No response from OpenAI API');
     }
 
-    if (!aiResponse.output || aiResponse.output.length === 0) {
-      throw new Error('No response from OpenAI Responses API');
-    }
-
-    // Step 4: Parse OpenAI Responses API response
-    const assistantMessage = aiResponse.output.find(item => 
-      item.type === 'message' && 'role' in item && item.role === 'assistant'
-    );
+    const aiContent = aiResponse.choices[0].message?.content;
+    console.log(`\n🟩 AI Response: ${aiContent}`);
     
-    if (!assistantMessage || assistantMessage.type !== 'message' || !('content' in assistantMessage)) {
-      throw new Error('No assistant message found in response');
-    }
-
-    const textContent = assistantMessage.content.find((content: any) => content.type === 'output_text');
-    if (!textContent || textContent.type !== 'output_text') {
-      throw new Error('No text content found in assistant message');
-    }
-
-    const aiContent = (textContent as any).text;
-    console.log(`\n🟩 AI Response: ${aiContent}`)
-    
-    // Step 5: Clean the AI response and use it appropriately
-    const aiText = aiContent.trim();
+    // Step 4: Clean the AI response and use it appropriately  
+    const aiText = aiContent?.trim();
     
     if (!aiText) {
       throw new Error(`Empty ${requestType} response from AI`);

@@ -278,6 +278,8 @@ export default function SessionsPage() {
         }),
       });
 
+      console.log('🎓 Teaching response:', teachingResponse);
+
       if (!teachingResponse.ok) {
         throw new Error('Failed to get teaching response');
       }
@@ -953,7 +955,7 @@ export default function SessionsPage() {
                 <div className="text-sm text-gray-600">Current Turn</div>
               </div>
               <div className="p-3 bg-green-50 rounded-lg">
-                <div className="text-xl font-bold">{sessionTranscript.turns.length - 1}</div>
+                <div className="text-xl font-bold">{sessionTranscript.turns.length > 0 ? sessionTranscript.turns.length - 1 : 0}</div>
                 <div className="text-sm text-gray-600">Completed</div>
               </div>
               <div className="p-3 bg-gray-50 rounded-lg">
