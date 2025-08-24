@@ -42,11 +42,11 @@ export const sessionCreateSchema = z.object({
 
 export const sessionUpdateSchema = z.object({
   difficulty_level: z.enum(difficultyLevelValues).optional(),
-  started_at: z.iso.datetime().optional(),
-  ended_at: z.iso.datetime().optional(),
+  started_at: z.string().datetime().optional(),
+  ended_at: z.string().datetime().optional(),
   total_turns: z.number().int().min(0).optional(),
   completed_turns: z.number().int().min(0).optional(),
-  audio_url: z.string().url().optional(),
+  audio_url: z.string().url().optional().nullable(),
   session_transcript_json: z.record(z.string(), z.any()).optional(),
   overall_progress_json: z.record(z.string(), z.any()).optional()
 });
@@ -72,14 +72,14 @@ export const sessionResponseSchema = z.object({
   target_language: z.string(),
   difficulty_level: z.string().nullable(),
   persona_id: z.string().nullable(),
-  started_at: z.iso.datetime().nullable(),
-  ended_at: z.iso.datetime().nullable(),
+  started_at: z.string().datetime().nullable(),
+  ended_at: z.string().datetime().nullable(),
   total_turns: z.number().int().nullable(),
   completed_turns: z.number().int().nullable(),
   audio_url: z.string().nullable(),
   session_transcript_json: z.record(z.string(), z.any()).nullable(),
   overall_progress_json: z.record(z.string(), z.any()).nullable(),
-  created_at: z.iso.datetime().nullable()
+  created_at: z.string().datetime().nullable()
 });
 
 export const turnResponseSchema = z.object({
@@ -92,7 +92,7 @@ export const turnResponseSchema = z.object({
   pronunciation_feedback_json: z.record(z.string(), z.any()).nullable(),
   grammar_feedback_json: z.record(z.string(), z.any()).nullable(),
   turn_completed: z.boolean().nullable(),
-  created_at: z.iso.datetime().nullable()
+  created_at: z.string().datetime().nullable()
 });
 
 // Error response schema
