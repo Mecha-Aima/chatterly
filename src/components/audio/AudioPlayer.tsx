@@ -38,10 +38,14 @@ export default function AudioPlayer({
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitializingRef = useRef<boolean>(false);
 
   // Initialize audio element
   useEffect(() => {
-    if (!audioUrl) return;
+    if (!audioUrl || isInitializingRef.current) return;
+    
+    isInitializingRef.current = true;
+    console.log('🎵 AudioPlayer: Initializing audio element', { audioUrl: audioUrl.substring(0, 50) + '...' });
 
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
@@ -57,19 +61,64 @@ export default function AudioPlayer({
     // Set initial volume
     audio.volume = playbackState.volume;
 
-    // Auto-play if requested
+    // Auto-play if requested (with proper promise handling)
     if (autoPlay) {
-      audio.play().catch(console.error);
+      console.log('🎵 AudioPlayer: Starting autoplay');
+      // Wait for the audio to be ready before attempting autoplay
+      const attemptAutoplay = () => {
+        if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+              // Handle the play() promise rejection gracefully
+              if (error.name !== 'AbortError') {
+                console.warn('🎵 AudioPlayer: Autoplay failed:', error.message);
+              }
+            });
+          }
+        } else {
+          // If not ready, wait for loadeddata event
+          audio.addEventListener('loadeddata', () => {
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+              playPromise.catch(error => {
+                if (error.name !== 'AbortError') {
+                  console.warn('🎵 AudioPlayer: Delayed autoplay failed:', error.message);
+                }
+              });
+            }
+          }, { once: true });
+        }
+      };
+      
+      // Small delay to ensure DOM is ready
+      setTimeout(attemptAutoplay, 100);
     }
 
     return () => {
+      console.log('🎵 AudioPlayer: Cleaning up audio element');
+      isInitializingRef.current = false;
+      
+      // Cleanup listeners first
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
-      audio.pause();
+      
+      // Safely pause and clean up audio
+      try {
+        if (!audio.paused) {
+          audio.pause();
+        }
+        audio.currentTime = 0;
+        audio.src = '';
+        audio.load(); // This helps clean up the audio element
+      } catch (error) {
+        // Silently handle any cleanup errors
+        console.debug('🎵 AudioPlayer: Cleanup warning:', error);
+      }
     };
   }, [audioUrl, autoPlay]);
 
@@ -148,7 +197,21 @@ export default function AudioPlayer({
     if (playbackState.isPlaying) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play().catch(console.error);
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          // Handle play promise rejection gracefully
+          if (error.name !== 'AbortError') {
+            console.warn('Audio play failed:', error.message);
+            // Update state to reflect failed play attempt
+            setPlaybackState(prev => ({
+              ...prev,
+              isPlaying: false,
+              error: 'Failed to play audio. Please try again.'
+            }));
+          }
+        });
+      }
     }
   }, [playbackState.isPlaying]);
 

@@ -1,14 +1,20 @@
 import { AudioSynthesisRequest, AudioSynthesisResponse, AudioCacheEntry } from '@/types/audio.types';
 
+export type TTSProvider = 'openai' | 'deepgram';
+
+interface ExtendedAudioSynthesisRequest extends AudioSynthesisRequest {
+  provider?: TTSProvider;
+}
+
 class AudioSynthesisManager {
   private cache: Map<string, AudioCacheEntry> = new Map();
   private readonly CACHE_EXPIRY_HOURS = 24;
   private readonly MAX_CACHE_SIZE = 100;
 
   /**
-   * Synthesize audio from text using OpenAI TTS API
+   * Synthesize audio from text using specified TTS provider
    */
-  async synthesizeAudio(request: AudioSynthesisRequest): Promise<AudioSynthesisResponse> {
+  async synthesizeAudio(request: ExtendedAudioSynthesisRequest): Promise<AudioSynthesisResponse> {
     try {
       // Check cache first
       const cacheKey = this.generateCacheKey(request);
@@ -29,8 +35,13 @@ class AudioSynthesisManager {
         };
       }
 
-      // Generate new audio
-      const audioResponse = await this.callOpenAITTS(request);
+      // Generate new audio using specified provider
+      const provider = request.provider || 'openai';
+      console.log(`🔊 AudioSynthesisManager: Using ${provider} TTS provider`);
+      
+      const audioResponse = provider === 'deepgram' 
+        ? await this.callDeepgramTTS(request)
+        : await this.callOpenAITTS(request);
       
       // Cache the result
       this.cacheAudio(cacheKey, request, audioResponse);
@@ -57,6 +68,7 @@ class AudioSynthesisManager {
    * Call OpenAI TTS API
    */
   private async callOpenAITTS(request: AudioSynthesisRequest): Promise<{ audioUrl: string; duration: number }> {
+    console.log('🔊 AudioSynthesisManager: Calling OpenAI TTS API');
     const response = await fetch('/api/audio/synthesize', {
       method: 'POST',
       headers: {
@@ -66,7 +78,7 @@ class AudioSynthesisManager {
     });
 
     if (!response.ok) {
-      throw new Error(`TTS API error: ${response.statusText}`);
+      throw new Error(`OpenAI TTS API error: ${response.statusText}`);
     }
 
     const result = await response.json();
@@ -74,11 +86,40 @@ class AudioSynthesisManager {
   }
 
   /**
+   * Call Deepgram TTS API
+   */
+  private async callDeepgramTTS(request: AudioSynthesisRequest): Promise<{ audioUrl: string; duration: number }> {
+    console.log('🔊 AudioSynthesisManager: Calling Deepgram TTS API');
+    const response = await fetch('/api/audio/deepgram-tts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: request.text,
+        language: request.language,
+        voice: request.voice,
+        speed: request.speed
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Deepgram TTS API error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return {
+      audioUrl: result.audioUrl,
+      duration: result.duration || 0
+    };
+  }
+
+  /**
    * Generate cache key for request
    */
-  private generateCacheKey(request: AudioSynthesisRequest): string {
-    const { text, language, voice, speed, quality } = request;
-    return `${language}_${voice || 'alloy'}_${speed || 1.0}_${quality || 'high'}_${this.hashText(text)}`;
+  private generateCacheKey(request: ExtendedAudioSynthesisRequest): string {
+    const { text, language, voice, speed, quality, provider } = request;
+    return `${provider || 'openai'}_${language}_${voice || 'alloy'}_${speed || 1.0}_${quality || 'high'}_${this.hashText(text)}`;
   }
 
   /**
@@ -115,7 +156,7 @@ class AudioSynthesisManager {
   /**
    * Cache audio with expiration
    */
-  private cacheAudio(cacheKey: string, request: AudioSynthesisRequest, audioResponse: { audioUrl: string; duration: number }) {
+  private cacheAudio(cacheKey: string, request: ExtendedAudioSynthesisRequest, audioResponse: { audioUrl: string; duration: number }) {
     // Clean up old entries if cache is full
     if (this.cache.size >= this.MAX_CACHE_SIZE) {
       this.cleanupCache();

@@ -302,7 +302,7 @@ function ProfileOverview({
               <div className="text-3xl font-bold text-primary mb-2">
                 {progress.overall_stats.total_sessions}
               </div>
-              <p className="text-gray-600">Total Sessions</p>
+              <p className="text-gray-600">Total Lessons</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
@@ -412,6 +412,13 @@ function ProfileActivity({ progress }: { progress: ProgressResponse | null }) {
     );
   }
 
+  const language_map = {
+    "en": "English",
+    "es": "Spanish",
+    "fr": "French",
+    "de": "German"
+  }
+
   return (
     <div className="space-y-6">
       <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
@@ -430,14 +437,14 @@ function ProfileActivity({ progress }: { progress: ProgressResponse | null }) {
                 <p className="text-2xl font-bold text-blue-700">
                   {progress.recent_activity.sessions_this_week}
                 </p>
-                <p className="text-sm text-blue-600">Sessions completed</p>
+                <p className="text-sm text-blue-600">Lessons completed</p>
               </div>
               <div className="bg-green-50 rounded-lg p-4">
                 <h4 className="font-semibold text-green-900 mb-2">This Month</h4>
                 <p className="text-2xl font-bold text-green-700">
                   {progress.recent_activity.sessions_this_month}
                 </p>
-                <p className="text-sm text-green-600">Sessions completed</p>
+                <p className="text-sm text-green-600">Lessons completed</p>
               </div>
             </div>
 
@@ -448,17 +455,17 @@ function ProfileActivity({ progress }: { progress: ProgressResponse | null }) {
                 <div className="space-y-2">
                   {Object.entries(progress.language_stats.sessions_by_language).map(([language, count]) => (
                     <div key={language} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="font-medium capitalize">{language}</span>
-                      <span className="text-sm text-gray-600">{count} sessions</span>
+                      <span className="font-medium capitalize">{language_map[language as keyof typeof language_map]}</span>
+                      <span className="text-sm text-gray-600">{count} lessons</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Last Session */}
+            {/* Last Lesson */}
             <div>
-              <h4 className="font-semibold mb-3">Last Session</h4>
+              <h4 className="font-semibold mb-3">Last Lesson</h4>
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-gray-600">
                   {progress.recent_activity.last_session_date
@@ -468,7 +475,7 @@ function ProfileActivity({ progress }: { progress: ProgressResponse | null }) {
                         month: 'long',
                         day: 'numeric'
                       })}`
-                    : 'No sessions completed yet'
+                    : 'No lessons completed yet'
                   }
                 </p>
               </div>

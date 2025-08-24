@@ -6,7 +6,15 @@ export async function POST(request: NextRequest) {
   try {
     // Get the request body
     const body = await request.json();
-    const { language, difficulty, turnNumber, sessionContext } = body;
+    const { language, difficulty, turnNumber, sessionContext, requestType, userInput } = body;
+    
+    console.log('🎓 Teaching API: Request received', {
+      language,
+      difficulty,
+      requestType: requestType || 'explanation',
+      hasUserInput: !!userInput,
+      turnNumber
+    });
 
     // Validate required fields
     if (!language || !difficulty) {
@@ -56,7 +64,9 @@ export async function POST(request: NextRequest) {
       difficulty,
       authToken,
       turnNumber,
-      sessionContext
+      sessionContext,
+      requestType: requestType || 'explanation',
+      userInput
     };
 
     // Generate teaching response

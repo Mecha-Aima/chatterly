@@ -3,7 +3,7 @@ import { AudioTranscriptionRequest, AudioTranscriptionResponse, WordLevelConfide
 class DeepgramASRManager {
   private readonly API_BASE_URL = 'https://api.deepgram.com/v1/listen';
   private readonly DEFAULT_MODEL = 'nova-2';
-  private readonly SUPPORTED_LANGUAGES = ['en', 'es', 'fr', 'de', 'it', 'pt'];
+  private readonly SUPPORTED_LANGUAGES = ['en', 'es', 'fr', 'de'];
 
   /**
    * Transcribe audio using Deepgram ASR API

@@ -42,12 +42,12 @@ export function BadgeCard({ badge, isEarned = false, awardedAt, className }: Bad
       <CardContent className="p-4 text-center">
         {/* Badge Image */}
         <div className="relative mb-3">
-          <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center overflow-hidden">
+          <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center overflow-hidden">
             {/* Placeholder for badge image */}
             <img 
               src={definition.imageUrl} 
               alt={definition.name}
-              className="w-12 h-12 object-cover"
+              className="w-16 h-16 object-cover"
               onError={(e) => {
                 // Fallback to emoji or icon if image fails to load
                 const target = e.target as HTMLImageElement;
